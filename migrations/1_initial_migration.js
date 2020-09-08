@@ -7,7 +7,7 @@ module.exports = async function(deployer) {
   const tokenMock = await DaiTokenMock.deployed()
   // Mint 1,000 Dai Tokens for the deployer
   await tokenMock.mint(
-    '0x23711fF3eD42a36b2b70276Adc4deA19f72d2AEC',
+    '0xbdF636ae5C3c77D7D2ec02df637038a84887d7D9',
     '1000000000000000000000'
   )
 };

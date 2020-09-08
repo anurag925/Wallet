@@ -3,7 +3,9 @@ import daiLogo from '../dai-logo.png';
 import './App.css';
 import Web3 from 'web3';
 import DaiTokenMock from '../abis/DaiTokenMock.json'
+import Biconomy from "@biconomy/mexa";
 
+let biconomy;
 class App extends Component {
   async componentWillMount() {
     await this.loadWeb3()
@@ -12,7 +14,9 @@ class App extends Component {
 
   async loadWeb3() {
     if (window.ethereum) {
-      window.web3 = new Web3(window.ethereum)
+      // window.web3 = new Web3(window.ethereum)
+      biconomy = new Biconomy(window.ethereum, {apiKey: "V_uOICY02.ea8a2067-3fda-4c30-bb0c-db1d7444dc0b" });
+      window.web3 = new Web3(biconomy);
       await window.ethereum.enable()
     }
     else if (window.web3) {
@@ -24,17 +28,48 @@ class App extends Component {
   }
 
   async loadBlockchainData() {
-    const web3 = window.web3
-    const accounts = await web3.eth.getAccounts()
-    this.setState({ account: accounts[0] })
-    const daiTokenAddress = "0x7b729B07EcBDEd8879Acf997aAF6546926982830" // Replace DAI Address Here
-    const daiTokenMock = new web3.eth.Contract(DaiTokenMock.abi, daiTokenAddress)
-    this.setState({ daiTokenMock: daiTokenMock })
-    const balance = await daiTokenMock.methods.balanceOf(this.state.account).call()
-    this.setState({ balance: web3.utils.fromWei(balance.toString(), 'Ether') })
-    const transactions = await daiTokenMock.getPastEvents('Transfer', { fromBlock: 0, toBlock: 'latest', filter: { from: this.state.account } })
-    this.setState({ transactions: transactions })
-    console.log(transactions)
+    biconomy.onEvent(biconomy.READY, async() => {
+      // Initialize your dapp here like getting user accounts etc
+      const web3 = window.web3
+      const accounts = await web3.eth.getAccounts()
+      // console.log(accounts);
+      this.setState({ account: accounts[0] })
+      const daiTokenAddress = "0xF11680b76A10a2A78119504AdD106FaF92e71778" // Replace DAI Address Here
+      const daiTokenMock = new web3.eth.Contract(DaiTokenMock.abi, daiTokenAddress)
+      this.setState({ daiTokenMock: daiTokenMock })
+      const balance = await daiTokenMock.methods.balanceOf(this.state.account).call()
+      this.setState({ balance: web3.utils.fromWei(balance.toString(), 'Ether') })
+      const transactions = await daiTokenMock.getPastEvents('Transfer', { fromBlock: 0, toBlock: 'latest', filter: { from: this.state.account } })
+      this.setState({ transactions: transactions })
+      console.log(transactions)
+    }).onEvent(biconomy.ERROR, (error, message) => {
+      // Handle error while initializing mexa
+      console.log(message);
+    });
+
+    biconomy.onEvent(biconomy.LOGIN_CONFIRMATION, async(log) => {
+      // User's Contract Wallet creation successful
+      console.log("heyyyyyyyyyyyyyyyyy")
+      console.log(`User contract wallet address: ${log.userContract}`);
+      let contractAddress=await biconomy.getUserContract(this.state.account);
+      console.log("This is the user contract address inside onEvent Login cns "+contractAddress);
+     });
+    
+  }
+  
+  async onLogin(event){
+    try{
+      let response = await biconomy.login(this.state.account);
+      if(response && response.transactionHash) {
+         console.log("// First time user. Contract wallet transaction pending.");
+         // Wait for confirmation.
+
+      } else if (response && response.userContract) {
+         console.log("// Existing user login successful");
+      }
+   } catch(error) {
+      console.log(`Error Code: ${error.code} Error Message: ${error.message}`);
+   }
   }
 
   transfer(recipient, amount) {
@@ -51,6 +86,7 @@ class App extends Component {
     }
 
     this.transfer = this.transfer.bind(this)
+    this.onLogin=this.onLogin.bind(this)
   }
 
   render() {
@@ -102,6 +138,8 @@ class App extends Component {
                       placeholder="Amount"
                       required />
                   </div>
+                  <button type="button" className="btn btn-primary btn-block" onClick={this.onLogin}>Login</button>
+
                   <button type="submit" className="btn btn-primary btn-block">Send</button>
                 </form>
                 <table className="table">
