@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import daiLogo from '../dai-logo.png';
 import './App.css';
 import Web3 from 'web3';
 import DaiTokenMock from '../abis/DaiTokenMock.json'
